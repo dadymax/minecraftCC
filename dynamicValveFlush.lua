@@ -20,7 +20,7 @@ function GetWirelessModem()
     for i = 1,6 do
         if peripheral.isPresent(listOfSides[i]) 
             and peripheral.getType(listOfSides[i]) == "modem" 
-            and peripheral.call(listOfSides[i], "isWireless") == "true"
+            and peripheral.call(listOfSides[i], "isWireless")
                 then return peripheral.wrap(listOfSides[i])
         end
     end
@@ -65,12 +65,15 @@ function Server()
     listenchannel = GetListenChannel()
     content = {}
     
+    print("Mode: " .. Settings.mode)    
+    print("UID: " .. Settings.UID)
+
     while true do
         repeat
             event, side, channel, replyChannel, message, distance = os.pullEvent("modem_message")
         until channel == listenchannel
                 
-        print("Received message: " .. tostring(message))
+        print("Received message: " .. tostring(message["mType"]) .. " from " .. tostring(message["uid"]))
         
         --message may be:
         --	register new sensor/switch
@@ -97,12 +100,13 @@ function Server()
                 end
             end
 		end
+        os.sleep(1)
     end
     
 end
 
 function Sensor()
-    local event, side, channel, replyChannel, message, distance, listenchannel, content, per, capacity, status
+    local event, side, channel, replyChannel, message, distance, listenchannel, content, per, capacity, status, fType
     listenchannel = GetListenChannel()    
     per = GetSensorPeripheral()
     content = per.getStored()
@@ -111,8 +115,18 @@ function Sensor()
     fType = content["name"]
     status = false
     
+    while not fType or fType == ""  do
+        print("Try determine gas type")
+        content = per.getBuffer()
+        fType = content["name"]
+    end
+
     SendMessage(GetSetverChannel(), "register", nil, fType, status)
     
+    print("Mode: " .. Settings.mode)
+    print("UID: " .. Settings.UID)
+    print("gas type: " .. fType)
+
     while true do
         content = per.getStored().amount
         if content < threshold and status then
@@ -127,11 +141,26 @@ function Sensor()
 end
 
 function Switch()
-    local event, side, channel, replyChannel, message, distance, listenchannel, content, per, capacity, status
+    local event, side, channel, replyChannel, message, distance, listenchannel, content, per, capacity, status, fType
     listenchannel = GetListenChannel()    
     per = GetSwitchPeripheral()
+    status = false
+    
+    content = per.getBuffer()
+    fType = content["name"]
+
+    while not fType or fType == ""  do
+        print("Try determine gas type")
+        content = per.getBuffer()
+        fType = content["name"]
+    end
     
     rs.setOutput(peripheral.getName(per), true)
+    SendMessage(GetSetverChannel(), "register", nil, fType, status)
+
+    print("Mode: " .. Settings.mode)
+    print("UID: " .. Settings.UID)
+    print("gas type: " .. fType)
         
     while true do
         repeat
@@ -144,11 +173,13 @@ function Switch()
             rs.setOutput(peripheral.getName(per), not message["status"])
             print("switched to: " .. tostring(not message["status"]))
         end
+        os.sleep(1)
     end
 end
 
 function SendMessage(receiver, mType2, receiveruid, fluidtype2, status2)
     modem.transmit(receiver, GetListenChannel(), {mType = mType2, uid = Settings.UID, ruid = receiveruid, senderType = Settings.mode, fluidtype = fluidtype2, status = status2 } )
+    print("Message sent: " .. tostring(mType2) .. ". Status: " .. tostring(status2))
 end
 
 modem = GetWirelessModem()
