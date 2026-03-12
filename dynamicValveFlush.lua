@@ -121,7 +121,7 @@ function Sensor()
         fType = content["name"]
     end
 
-    SendMessage(GetSetverChannel(), "register", nil, fType, status)
+    SendMessage(GetServerChannel(), "register", nil, fType, status)
     
     print("Mode: " .. Settings.mode)
     print("UID: " .. Settings.UID)
@@ -131,10 +131,10 @@ function Sensor()
         content = per.getStored().amount
         if content < threshold and status then
         	status = false
-            SendMessage(GetSetverChannel(), "data", nil, fType, status)
+            SendMessage(GetServerChannel(), "data", nil, fType, status)
         elseif content > (capacity - 10) and not status then
             status = true
-            SendMessage(GetSetverChannel(), "data", nil, fType, status)
+            SendMessage(GetServerChannel(), "data", nil, fType, status)
         end
         os.sleep(1)
     end
@@ -156,7 +156,7 @@ function Switch()
     end
     
     rs.setOutput(peripheral.getName(per), true)
-    SendMessage(GetSetverChannel(), "register", nil, fType, status)
+    SendMessage(GetServerChannel(), "register", nil, fType, status)
 
     print("Mode: " .. Settings.mode)
     print("UID: " .. Settings.UID)
